@@ -1,0 +1,1837 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#7B8FA1">
+  <meta name="description" content="不管生活如何苟，最后都是有微光的。">
+  <title>苟住了 - 理直气壮不优秀</title>
+  <link rel="manifest" href="/manifest.json">
+  <link rel="apple-touch-icon" href="/icon.svg">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="苟住了">
+  <script>
+    if ('serviceWorker' in navigator) {
+      window.addEventListener('load', () =>
+        navigator.serviceWorker.register('/sw.js').catch(() => {})
+      );
+    }
+  </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            'evening-blue': '#7B8FA1',
+            'cement-gray': '#A8A8A8',
+            'warm-beige': '#F5E6D3',
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    * { -webkit-tap-highlight-color: transparent; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', sans-serif;
+      overflow-x: hidden;
+    }
+
+    /* ===== 动画定义 ===== */
+    @keyframes burn {
+      0%   { opacity:1; transform:translateY(0) scale(1) rotate(0deg); filter:blur(0) brightness(1); }
+      30%  { opacity:.8; transform:translateY(-30px) scale(1.2) rotate(5deg); filter:blur(2px) brightness(1.5); color:#ff6b00; }
+      60%  { opacity:.4; transform:translateY(-80px) scale(.6) rotate(-10deg); filter:blur(5px) brightness(2); color:#ff0000; }
+      100% { opacity:0; transform:translateY(-150px) scale(.2) rotate(20deg); filter:blur(10px) brightness(3); }
+    }
+    @keyframes explode {
+      0%   { opacity:1; transform:translate(0,0) scale(1); }
+      100% { opacity:0; transform:translate(var(--tx),var(--ty)) scale(0); }
+    }
+    @keyframes shake {
+      0%,100%{ transform:translateX(0) rotate(0deg); }
+      15%{ transform:translateX(-10px) rotate(-4deg); }
+      30%{ transform:translateX(10px) rotate(4deg); }
+      45%{ transform:translateX(-8px) rotate(-3deg); }
+      60%{ transform:translateX(8px) rotate(3deg); }
+      75%{ transform:translateX(-4px) rotate(-1deg); }
+      90%{ transform:translateX(4px) rotate(1deg); }
+    }
+    @keyframes tear {
+      0%   { transform:rotate(0deg) translateY(0) scale(1); opacity:1; }
+      40%  { transform:rotate(12deg) translateY(-40px) scale(.9); opacity:.9; }
+      100% { transform:rotate(50deg) translateY(-220px) translateX(120px) scale(.2); opacity:0; }
+    }
+    @keyframes pulse-scale {
+      0%,100%{ transform:scale(1); }
+      50%{ transform:scale(1.12); }
+    }
+    @keyframes glow-ring {
+      0%,100%{ box-shadow:0 0 0 0 rgba(251,191,36,.4); }
+      50%{ box-shadow:0 0 0 16px rgba(251,191,36,0); }
+    }
+    @keyframes slideIn {
+      from{ opacity:0; transform:translateX(-16px); }
+      to  { opacity:1; transform:translateX(0); }
+    }
+    @keyframes fadeSlide {
+      from{ opacity:0; transform:translateY(12px); }
+      to  { opacity:1; transform:translateY(0); }
+    }
+    @keyframes shimmer {
+      0%  { background-position:-200% 0; }
+      100%{ background-position:200% 0; }
+    }
+
+    @keyframes card-tear-left {
+      0%   { transform:rotate(0deg) translateX(0) translateY(0); opacity:1; clip-path:polygon(0 0,50% 0,52% 20%,48% 50%,52% 80%,50% 100%,0 100%); }
+      100% { transform:rotate(-25deg) translateX(-140%) translateY(-40px); opacity:0; clip-path:polygon(0 0,50% 0,52% 20%,48% 50%,52% 80%,50% 100%,0 100%); }
+    }
+    @keyframes card-tear-right {
+      0%   { transform:rotate(0deg) translateX(0) translateY(0); opacity:1; clip-path:polygon(50% 0,100% 0,100% 100%,50% 100%,48% 80%,52% 50%,48% 20%); }
+      100% { transform:rotate(25deg) translateX(140%) translateY(-40px); opacity:0; clip-path:polygon(50% 0,100% 0,100% 100%,50% 100%,48% 80%,52% 50%,48% 20%); }
+    }
+    .card-tearing-left  { animation:card-tear-left  .6s ease-out forwards; }
+    .card-tearing-right { animation:card-tear-right .6s ease-out forwards; }
+    /* 泡泡压扁态 */
+    .bubble.popped {
+      transform:scale(0.65) !important;
+      background:radial-gradient(circle at 50% 50%, rgba(180,180,180,.25), rgba(150,150,150,.15)) !important;
+      box-shadow:none !important;
+      border:1px solid rgba(0,0,0,.08) !important;
+      transition:transform .1s, background .15s !important;
+      cursor:default;
+    }
+
+    .burning    { animation:burn 1.5s ease-out forwards; }
+    .shaking    { animation:shake .5s ease-in-out; }
+    .tearing    { animation:tear .8s ease-out forwards; pointer-events:none; }
+    .fish-hit   { animation:pulse-scale .25s ease-out, glow-ring .4s ease-out; }
+    .activity-item { animation:slideIn .4s ease-out; }
+    .game-panel { animation:fadeSlide .35s ease-out; }
+
+    /* 粒子 */
+    .particle {
+      position:fixed;
+      width:8px; height:8px;
+      border-radius:50%;
+      pointer-events:none;
+      z-index:9999;
+      animation:explode 1s ease-out forwards;
+    }
+
+    /* 泡泡 */
+    .bubble {
+      background:radial-gradient(circle at 30% 30%, rgba(255,255,255,.95), rgba(130,200,255,.45));
+      border-radius:50%;
+      cursor:pointer;
+      transition:transform .08s;
+      box-shadow:inset 0 0 8px rgba(255,255,255,.6), 0 2px 6px rgba(0,0,0,.18);
+      aspect-ratio:1;
+    }
+    .bubble:hover { transform:scale(1.12); }
+    .bubble.popped{ transform:scale(0) !important; transition:transform .12s; }
+
+    /* 游戏切换按钮 */
+    .game-nav-btn {
+      transition:all .2s;
+      white-space:nowrap;
+    }
+    .game-nav-btn.active {
+      background:#7B8FA1;
+      color:white;
+    }
+
+    /* 微光卡片 */
+    .glimmer-card {
+      transition:transform .2s, box-shadow .2s;
+    }
+    .glimmer-card:hover {
+      transform:translateY(-4px);
+      box-shadow:0 8px 24px rgba(0,0,0,.1);
+    }
+    .image-preview {
+      width:100%;
+      max-height:280px;
+      object-fit:cover;
+      border-radius:12px;
+    }
+
+    /* 响应式：平板/桌面 */
+    @media (min-width: 640px) {
+      main { padding: 1.5rem 2rem 4rem; }
+      #section-gou header h1 { font-size: 1.5rem; }
+      .game-nav-btn { font-size: 0.8rem; padding: 0.4rem 1rem; }
+    }
+    @media (min-width: 768px) {
+      body { background: linear-gradient(135deg, #F5E6D3 0%, #fff 50%, #fffbf5 100%); }
+      main { max-width: 480px; }
+    }
+
+    /* 分隔区域标题 */
+    .section-divider {
+      display:flex;
+      align-items:center;
+      gap:12px;
+      margin-bottom:16px;
+    }
+    .section-divider::before,
+    .section-divider::after {
+      content:'';
+      flex:1;
+      height:1px;
+      background:rgba(168,168,168,.3);
+    }
+  </style>
+</head>
+<body class="min-h-screen bg-gradient-to-b from-warm-beige via-white to-amber-50">
+<main class="max-w-lg mx-auto p-5 pb-16">
+
+  <!-- ╔══════════════════════════════╗ -->
+  <!-- ║  第一区：苟住了              ║ -->
+  <!-- ╚══════════════════════════════╝ -->
+  <section id="section-gou" class="mb-10">
+
+    <!-- 头部：紧凑版 -->
+    <header class="flex items-center justify-between pt-4 pb-3">
+      <div class="flex items-center gap-2.5">
+        <span class="text-3xl">🐟</span>
+        <div>
+          <h1 class="text-xl font-bold text-evening-blue leading-tight">苟住了</h1>
+          <p class="text-xs text-cement-gray/70 leading-tight">你是：<span id="nickname" class="text-evening-blue/80 font-medium"></span></p>
+        </div>
+      </div>
+      <div class="text-right bg-white/80 backdrop-blur px-3 py-2 rounded-2xl shadow-sm">
+        <p class="text-2xl font-bold text-evening-blue leading-none" id="checkinCount">0</p>
+        <p class="text-xs text-cement-gray leading-tight mt-0.5">人也在苟 · 不孤单</p>
+      </div>
+    </header>
+
+    <!-- 苟着广场：单行滚动条 -->
+    <div class="bg-white/80 backdrop-blur rounded-xl px-3 py-2.5 mb-4 shadow-sm flex items-center gap-2 overflow-hidden">
+      <span class="w-1.5 h-1.5 bg-green-400 rounded-full flex-shrink-0" style="animation:pulse-scale 2s ease-in-out infinite"></span>
+      <span class="text-xs text-cement-gray/50 flex-shrink-0 font-medium">广场</span>
+      <div class="flex-1 overflow-hidden relative" style="height:18px">
+        <span id="tickerCurrent" class="absolute text-xs text-cement-gray whitespace-nowrap block truncate w-full transition-all duration-500" style="top:0;opacity:1">正在连接...</span>
+        <span id="tickerNext" class="absolute text-xs text-cement-gray whitespace-nowrap block truncate w-full transition-all duration-500" style="top:20px;opacity:0"></span>
+      </div>
+      <button onclick="toggleFeedExpand()" id="feedExpandBtn" class="flex-shrink-0 text-xs text-cement-gray/40 hover:text-cement-gray px-1">≡</button>
+    </div>
+    <!-- 展开的广场面板（默认收起） -->
+    <div id="feedPanel" class="hidden bg-white/80 backdrop-blur rounded-2xl p-4 mb-4 shadow-sm">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-sm font-semibold text-evening-blue">苟着广场</span>
+        <button onclick="toggleFeedExpand()" class="text-xs text-cement-gray/50">收起 ×</button>
+      </div>
+      <div id="activityFeed" class="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+        <div class="text-center text-cement-gray py-4 text-xs">正在连接广场...</div>
+      </div>
+    </div>
+
+    <!-- 今日苟住打卡：可折叠 -->
+    <div>
+      <button onclick="toggleCheckin()"
+        class="w-full flex items-center justify-between bg-white/80 backdrop-blur rounded-2xl px-4 py-3 shadow-sm active:scale-98 transition-all">
+        <div class="flex items-center gap-2">
+          <span class="text-base">📋</span>
+          <span class="text-sm font-semibold text-evening-blue">今日苟住打卡</span>
+          <span id="checkinDoneCount" class="text-xs text-cement-gray/60 bg-warm-beige px-1.5 py-0.5 rounded-full hidden">已打0卡</span>
+        </div>
+        <span id="checkinToggleIcon" class="text-cement-gray text-xl leading-none transition-transform duration-200">＋</span>
+      </button>
+      <div id="checkinGrid" class="grid grid-cols-2 gap-3 mt-2 hidden">
+        <button onclick="checkin(this,'成功躺平','🛏️')"
+          class="checkin-btn bg-white/80 backdrop-blur rounded-2xl p-4 shadow-sm active:scale-95 transition-all text-left">
+          <div class="text-3xl mb-2">🛏️</div>
+          <div class="text-sm font-medium text-gray-700">成功躺平</div>
+          <div class="text-xs text-cement-gray mt-0.5">今天也维持了生命体征</div>
+        </button>
+        <button onclick="checkin(this,'外卖续命','🍜')"
+          class="checkin-btn bg-white/80 backdrop-blur rounded-2xl p-4 shadow-sm active:scale-95 transition-all text-left">
+          <div class="text-3xl mb-2">🍜</div>
+          <div class="text-sm font-medium text-gray-700">外卖续命</div>
+          <div class="text-xs text-cement-gray mt-0.5">美食是苟着的动力</div>
+        </button>
+        <button onclick="checkin(this,'最后才动手','⏰')"
+          class="checkin-btn bg-white/80 backdrop-blur rounded-2xl p-4 shadow-sm active:scale-95 transition-all text-left">
+          <div class="text-3xl mb-2">⏰</div>
+          <div class="text-sm font-medium text-gray-700">最后才动手</div>
+          <div class="text-xs text-cement-gray mt-0.5">但起码动手了</div>
+        </button>
+        <button onclick="checkin(this,'社交装死','😶')"
+          class="checkin-btn bg-white/80 backdrop-blur rounded-2xl p-4 shadow-sm active:scale-95 transition-all text-left">
+          <div class="text-3xl mb-2">😶</div>
+          <div class="text-sm font-medium text-gray-700">社交装死</div>
+          <div class="text-xs text-cement-gray mt-0.5">消息已读，回复明天</div>
+        </button>
+      </div>
+    </div>
+  </section>
+
+  <!-- ╔══════════════════════════════╗ -->
+  <!-- ║  第二区：解压游戏            ║ -->
+  <!-- ╚══════════════════════════════╝ -->
+  <section id="section-games" class="mb-10">
+
+    <div class="section-divider">
+      <span class="text-sm font-semibold text-evening-blue px-2">解压一下</span>
+    </div>
+
+    <!-- 游戏切换导航 -->
+    <div class="relative mb-4">
+      <div class="flex gap-2 overflow-x-auto pb-2" id="gameNav" style="scrollbar-width:none;-webkit-overflow-scrolling:touch">
+        <button onclick="switchGame(0)" class="game-nav-btn active text-xs border border-cement-gray/30 px-3 py-1.5 rounded-full flex-shrink-0">🪵 木鱼</button>
+        <button onclick="switchGame(1)" class="game-nav-btn text-xs border border-cement-gray/30 px-3 py-1.5 rounded-full flex-shrink-0">📓 小本本</button>
+        <button onclick="switchGame(2)" class="game-nav-btn text-xs border border-cement-gray/30 px-3 py-1.5 rounded-full flex-shrink-0">💭 泡泡纸</button>
+        <button onclick="switchGame(3)" class="game-nav-btn text-xs border border-cement-gray/30 px-3 py-1.5 rounded-full flex-shrink-0">📅 撕日历</button>
+        <button onclick="switchGame(4)" class="game-nav-btn text-xs border border-cement-gray/30 px-3 py-1.5 rounded-full flex-shrink-0">📱 裂屏</button>
+        <button onclick="switchGame(5)" class="game-nav-btn text-xs border border-cement-gray/30 px-3 py-1.5 rounded-full flex-shrink-0">🎈 气球</button>
+        <button onclick="switchGame(6)" class="game-nav-btn text-xs border border-cement-gray/30 px-3 py-1.5 rounded-full flex-shrink-0">🫁 呼吸</button>
+      </div>
+      <!-- 右侧渐隐提示"还有更多" -->
+      <div id="navFade" class="absolute right-0 top-0 bottom-2 w-10 pointer-events-none"
+        style="background:linear-gradient(to right,transparent,rgba(245,230,211,.9))"></div>
+    </div>
+
+    <!-- 游戏容器 -->
+    <div id="gameContainer" class="bg-white/80 backdrop-blur rounded-2xl shadow-sm overflow-hidden">
+
+      <!-- 游戏0：电子木鱼 -->
+      <div id="game-0" class="game-panel p-8 text-center">
+        <p class="text-xs text-cement-gray mb-6">敲一下，焦虑 -1</p>
+        <button id="fishBtn" onclick="knockWoodenFish(event)"
+          class="w-36 h-36 mx-auto bg-gradient-to-br from-amber-500 to-amber-800 rounded-full shadow-2xl
+                 active:scale-90 transition-transform flex items-center justify-center text-7xl select-none">
+          🪵
+        </button>
+        <p class="text-4xl font-bold text-evening-blue mt-6" id="woodenFishCount">0</p>
+        <p class="text-xs text-cement-gray mt-1">功德值</p>
+      </div>
+
+      <!-- 游戏1：小本本 -->
+      <div id="game-1" class="game-panel hidden" style="overflow:hidden">
+        <!-- 本子封面头 -->
+        <div style="background:#7B8FA1;padding:10px 18px 8px;display:flex;align-items:center;justify-content:space-between">
+          <div>
+            <p style="color:white;font-size:13px;font-weight:700;letter-spacing:.04em">📓 记仇小本本</p>
+            <p style="color:rgba(255,255,255,.55);font-size:10px;margin-top:1px">写下来·记住它·然后撕掉</p>
+          </div>
+          <span style="color:rgba(255,255,255,.4);font-size:11px">今日</span>
+        </div>
+        <!-- 螺旋孔装饰 -->
+        <div style="background:#6a7d8e;display:flex;justify-content:space-around;padding:4px 12px">
+          <div style="width:11px;height:11px;border-radius:50%;background:#fff;opacity:.25;box-shadow:inset 0 1px 3px rgba(0,0,0,.4)"></div>
+          <div style="width:11px;height:11px;border-radius:50%;background:#fff;opacity:.25;box-shadow:inset 0 1px 3px rgba(0,0,0,.4)"></div>
+          <div style="width:11px;height:11px;border-radius:50%;background:#fff;opacity:.25;box-shadow:inset 0 1px 3px rgba(0,0,0,.4)"></div>
+          <div style="width:11px;height:11px;border-radius:50%;background:#fff;opacity:.25;box-shadow:inset 0 1px 3px rgba(0,0,0,.4)"></div>
+          <div style="width:11px;height:11px;border-radius:50%;background:#fff;opacity:.25;box-shadow:inset 0 1px 3px rgba(0,0,0,.4)"></div>
+          <div style="width:11px;height:11px;border-radius:50%;background:#fff;opacity:.25;box-shadow:inset 0 1px 3px rgba(0,0,0,.4)"></div>
+          <div style="width:11px;height:11px;border-radius:50%;background:#fff;opacity:.25;box-shadow:inset 0 1px 3px rgba(0,0,0,.4)"></div>
+        </div>
+        <!-- 纸张区（有格线 + 红色左边距） -->
+        <div style="position:relative;background:#faf8f2;background-image:repeating-linear-gradient(transparent 0px,transparent 27px,rgba(100,116,139,.13) 27px,rgba(100,116,139,.13) 28px);background-size:100% 28px;min-height:176px">
+          <!-- 红色竖线 -->
+          <div style="position:absolute;left:44px;top:0;bottom:0;width:1.5px;background:rgba(239,68,68,.22);pointer-events:none"></div>
+          <textarea id="rantInput"
+            placeholder="今天被谁气到了？老板？作业？自己？全写这里……"
+            maxlength="200"
+            style="width:100%;height:176px;background:transparent;border:none;outline:none;resize:none;font-size:14px;line-height:28px;color:#374151;padding:5px 18px 8px 54px;font-family:inherit;box-sizing:border-box"></textarea>
+          <!-- 撕卡动画覆盖层（绝对定位，动画期间显示） -->
+          <div id="noteTearOverlay" style="display:none;position:absolute;inset:0;z-index:20;pointer-events:none"></div>
+        </div>
+        <!-- 底部操作栏 -->
+        <div style="background:#f0ede4;border-top:1px solid rgba(0,0,0,.07);padding:10px 18px;display:flex;align-items:center;justify-content:space-between">
+          <span style="font-size:11px;color:#b0a898"><span id="charCount">0</span>/200 字</span>
+          <button onclick="tearNotecard()"
+            style="background:linear-gradient(135deg,#ef4444,#dc2626);color:white;border:none;padding:9px 22px;border-radius:99px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:.05em;box-shadow:0 3px 12px rgba(239,68,68,.35);active:transform:scale(.95)">
+            ✂ 记好了，撕！
+          </button>
+        </div>
+        <!-- 已撕页数 -->
+        <div style="background:#faf8f2;text-align:center;padding:10px 0 14px;border-top:1px dashed rgba(0,0,0,.06)">
+          <span style="font-size:11px;color:#c0b8ae">已撕掉 <span id="tornCardCount" style="font-size:17px;font-weight:700;color:#7B8FA1">0</span> 页</span>
+        </div>
+      </div>
+
+      <!-- 游戏2：捏泡泡纸 -->
+      <div id="game-2" class="game-panel p-6 hidden">
+        <p class="text-xs text-cement-gray mb-4 text-center">使劲捏！捏完一整板才算赢</p>
+        <div id="bubbleWrap" class="grid grid-cols-6 gap-2"></div>
+        <!-- 全部捏完庆祝 -->
+        <div id="bubbleAllPopped" class="hidden text-center py-3">
+          <p class="text-base font-bold text-evening-blue">🎉 全部捏完了！</p>
+          <p class="text-xs text-cement-gray mt-0.5">太解压了，重置再来一板？</p>
+        </div>
+        <div class="flex justify-between items-center mt-3">
+          <span class="text-xs text-cement-gray">
+            已捏爆 <span id="poppedCount" class="text-evening-blue font-bold text-base">0</span>
+            <span class="text-cement-gray/50"> / 36</span>
+          </span>
+          <button onclick="createBubbles()" class="text-xs text-cement-gray border border-cement-gray/30 px-3 py-1 rounded-full active:scale-95 transition-transform">
+            新的一板
+          </button>
+        </div>
+      </div>
+
+      <!-- 游戏3：撕日历（重设计：情绪标签） -->
+      <div id="game-3" class="game-panel p-5 text-center hidden">
+        <p class="text-xs text-cement-gray mb-3">选好情绪，然后撕掉那一天</p>
+        <!-- 情绪标签选择 -->
+        <div class="flex flex-wrap justify-center gap-2 mb-5" id="moodTags">
+          <button onclick="setCalendarMood(this,'烦人的',['#f87171','#ef4444'])"     class="mood-tag text-xs px-3 py-1.5 rounded-full border border-red-200 text-red-500 bg-red-50 active:scale-95 transition-all">😤 烦人</button>
+          <button onclick="setCalendarMood(this,'疲惫的',['#a78bfa','#7c3aed'])"     class="mood-tag text-xs px-3 py-1.5 rounded-full border border-purple-200 text-purple-500 bg-purple-50 active:scale-95 transition-all">😮‍💨 疲惫</button>
+          <button onclick="setCalendarMood(this,'焦虑的',['#fb923c','#ea580c'])"     class="mood-tag text-xs px-3 py-1.5 rounded-full border border-orange-200 text-orange-500 bg-orange-50 active:scale-95 transition-all">😰 焦虑</button>
+          <button onclick="setCalendarMood(this,'无聊的',['#94a3b8','#64748b'])"     class="mood-tag text-xs px-3 py-1.5 rounded-full border border-gray-200 text-gray-500 bg-gray-50 active:scale-95 transition-all">😶 无聊</button>
+          <button onclick="setCalendarMood(this,'加班的',['#f59e0b','#d97706'])"     class="mood-tag text-xs px-3 py-1.5 rounded-full border border-amber-200 text-amber-600 bg-amber-50 active:scale-95 transition-all">💼 加班</button>
+          <button onclick="setCalendarMood(this,'还不错',['#34d399','#059669'])"     class="mood-tag text-xs px-3 py-1.5 rounded-full border border-green-200 text-green-600 bg-green-50 active:scale-95 transition-all">🙂 还不错</button>
+        </div>
+        <!-- 日历卡 -->
+        <div id="calendarWrapper" class="flex justify-center mb-4">
+          <div id="calendar"
+            onclick="tearCalendar()"
+            class="w-36 text-white p-6 rounded-2xl shadow-2xl cursor-pointer active:scale-90 transition-transform select-none"
+            style="background:linear-gradient(135deg,#f87171,#ef4444)">
+            <div class="text-5xl font-black" id="calendarDay">15</div>
+            <div class="text-xs mt-2 opacity-90 font-medium" id="calendarMoodLabel">烦人的日子</div>
+          </div>
+        </div>
+        <p class="text-xs text-cement-gray mb-1">↑ 点击撕掉</p>
+        <p class="text-3xl font-bold text-evening-blue mt-2" id="tornCount">0</p>
+        <p class="text-xs text-cement-gray mt-0.5">已撕掉 · 天</p>
+      </div>
+
+      <!-- 游戏4：裂屏 -->
+      <div id="game-4" class="game-panel hidden relative" style="height:380px">
+        <p class="text-xs text-cement-gray text-center pt-4 pb-2 relative z-10">点击屏幕，让它碎掉</p>
+        <canvas id="crackCanvas" class="absolute inset-0 w-full h-full rounded-2xl cursor-pointer"
+          style="touch-action:none"></canvas>
+        <div id="crackOverlay" class="absolute inset-0 flex flex-col items-center justify-center pointer-events-none opacity-0 transition-opacity z-10">
+          <p class="text-white text-lg font-bold drop-shadow-lg">碎了！</p>
+          <button onclick="resetCracks()" class="mt-3 bg-white/20 backdrop-blur text-white text-sm px-5 py-2 rounded-full pointer-events-auto border border-white/30">
+            修复
+          </button>
+        </div>
+        <div class="absolute bottom-4 left-0 right-0 text-center z-10 pointer-events-none">
+          <span class="text-xs text-cement-gray bg-white/60 px-3 py-1 rounded-full">
+            已碎 <span id="crackCount" class="font-bold text-red-500">0</span> 下
+          </span>
+        </div>
+      </div>
+
+      <!-- 游戏5：气球爆炸 -->
+      <div id="game-5" class="game-panel p-6 text-center hidden">
+        <p class="text-xs text-cement-gray mb-2">按住充气，松手飞走，撑到极限会爆炸</p>
+        <div class="relative flex items-center justify-center" style="height:260px">
+          <div id="balloon" class="absolute flex items-center justify-center select-none transition-none"
+            style="width:80px;height:96px;font-size:64px;cursor:pointer;transform-origin:bottom center">
+            🎈
+          </div>
+          <!-- 爆炸粒子容器 -->
+          <div id="balloonBurst" class="absolute inset-0 pointer-events-none overflow-hidden rounded-2xl"></div>
+        </div>
+        <button id="balloonBtn"
+          onpointerdown="startInflate(event)" onpointerup="stopInflate(event)" onpointerleave="stopInflate(event)"
+          class="w-full bg-gradient-to-r from-pink-400 to-purple-400 text-white py-4 rounded-xl font-medium
+                 shadow-lg active:scale-95 transition-transform select-none text-base">
+          按住充气 🫧
+        </button>
+        <p class="text-xs text-cement-gray mt-3">
+          已爆炸 <span id="burstCount" class="font-bold text-purple-500 text-base">0</span> 个
+        </p>
+      </div>
+
+      <!-- 游戏6：呼吸冥想 -->
+      <div id="game-6" class="game-panel p-6 text-center hidden">
+        <p class="text-xs text-cement-gray mb-1">4-7-8 呼吸法 · 立即缓解焦虑</p>
+        <p class="text-xs text-cement-gray/50 mb-5">吸气4秒 → 屏气7秒 → 呼气8秒</p>
+        <div class="relative flex items-center justify-center" style="height:180px">
+          <div id="breathRing"
+            class="rounded-full flex items-center justify-center select-none"
+            style="width:100px;height:100px;background:radial-gradient(circle at 38% 32%, rgba(255,255,255,0.45), transparent 60%), linear-gradient(135deg,#7B8FA1,#b8d0de);box-shadow:0 0 0 0 rgba(123,143,161,0.4);transition:width 4s ease-out, height 4s ease-out, box-shadow 4s ease-out">
+            <span id="breathPhaseText" class="text-white text-sm font-medium pointer-events-none">点击开始</span>
+          </div>
+        </div>
+        <p id="breathCountdown" class="text-3xl font-bold text-evening-blue h-10 leading-10"></p>
+        <button id="breathStartBtn" onclick="toggleBreathing()"
+          class="mt-1 bg-evening-blue text-white px-8 py-2.5 rounded-full text-sm font-medium active:scale-95 transition-transform shadow">
+          开始呼吸
+        </button>
+        <p class="text-xs text-cement-gray mt-3">
+          已完成 <span id="breathRounds" class="font-bold text-evening-blue text-base">0</span> 个循环
+        </p>
+      </div>
+
+    </div>
+
+    <!-- 换一换提示 -->
+    <p class="text-center text-xs text-cement-gray mt-3">← 滑动切换游戏 →</p>
+  </section>
+
+  <!-- ╔══════════════════════════════╗ -->
+  <!-- ║  第三区：微光时刻            ║ -->
+  <!-- ╚══════════════════════════════╝ -->
+  <section id="section-glimmer">
+
+    <div class="section-divider">
+      <span class="text-sm font-semibold text-amber-500 px-2">✨ 微光时刻</span>
+    </div>
+
+    <!-- 入口：一扇门 -->
+    <button onclick="openGlimmerDoor()"
+      class="w-full relative overflow-hidden rounded-3xl mb-3 active:scale-98 transition-all"
+      style="background:linear-gradient(145deg,#fffbeb 0%,#fef3c7 50%,#ffe4ba 100%);border:1.5px solid rgba(251,191,36,.3);box-shadow:0 4px 20px rgba(251,191,36,.2)">
+      <div class="absolute -top-8 -right-8 w-28 h-28 rounded-full opacity-25" style="background:radial-gradient(circle,#fcd34d,transparent)"></div>
+      <div class="absolute -bottom-6 -left-6 w-24 h-24 rounded-full opacity-15" style="background:radial-gradient(circle,#fb923c,transparent)"></div>
+      <div class="relative px-6 py-7 text-center">
+        <div class="text-5xl mb-3" style="filter:drop-shadow(0 4px 12px rgba(251,191,36,.4))">🌟</div>
+        <p class="text-base font-bold text-amber-600 mb-1">进入微光时刻</p>
+        <p class="text-xs text-amber-700/60 leading-relaxed mb-3">
+          治愈小卡片 · 温暖文字 · 美好瞬间<br>
+          解压之后，来这里找找光
+        </p>
+        <span class="inline-block bg-amber-400/25 text-amber-600 text-xs px-4 py-1.5 rounded-full font-medium">
+          滑一滑 · 看看今日微光 →
+        </span>
+      </div>
+    </button>
+
+    <!-- 投稿：加入卡片池 -->
+    <button onclick="toggleGlimmerUpload()"
+      class="w-full flex items-center justify-between bg-white/80 backdrop-blur rounded-2xl px-4 py-3 shadow-sm active:scale-98 transition-all">
+      <div class="flex items-center gap-2">
+        <span class="text-base">📸</span>
+        <span class="text-sm font-semibold text-amber-500">分享你的微光</span>
+        <span class="text-xs text-cement-gray/40">→ 投入卡片池</span>
+      </div>
+      <span id="glimmerUploadIcon" class="text-cement-gray text-xl leading-none">＋</span>
+    </button>
+    <div id="glimmerUploadArea" class="hidden bg-white/80 backdrop-blur rounded-2xl p-5 shadow-sm mt-2">
+      <input type="file" id="glimmerImage" accept="image/*" class="hidden" onchange="previewImage(event)">
+      <label for="glimmerImage"
+        class="block w-full rounded-xl border-2 border-dashed border-cement-gray/25 hover:border-evening-blue transition-colors cursor-pointer overflow-hidden">
+        <div id="imagePreviewArea" class="p-8 text-center">
+          <div class="text-4xl mb-2">📸</div>
+          <div class="text-sm text-cement-gray">点击上传一张今天的微光</div>
+        </div>
+      </label>
+      <textarea id="glimmerCaption" placeholder="一句话描述这个瞬间..."
+        class="w-full h-16 p-3 mt-3 bg-gray-50 border-2 border-cement-gray/20 rounded-xl resize-none focus:outline-none focus:border-amber-400 transition-colors text-sm"
+        maxlength="100"></textarea>
+      <div class="flex gap-2 mt-3 flex-wrap">
+        <button onclick="selectTag(this,'今天的小确幸')" class="tag-btn text-xs px-3 py-1 rounded-full border-2 border-cement-gray/25 transition-all">#今天的小确幸</button>
+        <button onclick="selectTag(this,'5元以内的快乐')" class="tag-btn text-xs px-3 py-1 rounded-full border-2 border-cement-gray/25 transition-all">#5元以内的快乐</button>
+        <button onclick="selectTag(this,'免费的美好')" class="tag-btn text-xs px-3 py-1 rounded-full border-2 border-cement-gray/25 transition-all">#免费的美好</button>
+      </div>
+      <button onclick="shareGlimmer()"
+        class="w-full mt-4 bg-gradient-to-r from-amber-400 to-orange-400 text-white py-3 rounded-xl font-medium active:scale-98 transition-all shadow-md">
+        ✨ 投入微光池
+      </button>
+    </div>
+
+  </section>
+
+  <!-- 底部 -->
+  <footer class="text-center mt-16 pb-4">
+    <p class="text-xs text-cement-gray/60 leading-relaxed">
+      万物皆有裂痕，那是光照进来的地方<br>
+      如果暂时没光，我们就先在裂缝里呆一会儿
+    </p>
+  </footer>
+
+</main>
+
+<!-- ╔══════════════════════════════╗ -->
+<!-- ║  微光时刻：全屏卡片门        ║ -->
+<!-- ╚══════════════════════════════╝ -->
+<div id="glimmerDoor" class="fixed inset-0 hidden flex-col"
+  style="z-index:100;background:linear-gradient(160deg,#fffbeb 0%,#fef9ec 45%,#f0f9ff 100%)">
+
+  <!-- 顶部导航 -->
+  <div class="flex items-center justify-between px-5 pt-6 pb-3 flex-shrink-0">
+    <div>
+      <p class="text-sm font-bold text-amber-500">✨ 微光时刻</p>
+      <p id="doorSeenCount" class="text-xs text-cement-gray/50 mt-0.5">今日已看 0 张</p>
+    </div>
+    <div class="flex items-center gap-2">
+      <button onclick="showLikedPanel()"
+        class="flex items-center gap-1.5 text-xs text-cement-gray/70 bg-white/80 backdrop-blur px-3 py-1.5 rounded-full shadow-sm active:scale-95 transition-transform">
+        ❤️ <span id="likedCount">0</span> 已喜欢
+      </button>
+      <button onclick="closeGlimmerDoor()"
+        class="w-8 h-8 flex items-center justify-center text-cement-gray text-xl bg-white/70 rounded-full shadow-sm active:scale-90 transition-transform">×</button>
+    </div>
+  </div>
+
+  <!-- 卡片展示区 -->
+  <div class="flex-1 flex items-center justify-center px-5 py-2 overflow-hidden">
+    <div id="doorCardWrap" class="relative w-full" style="max-width:340px;height:min(66vh,490px)">
+      <!-- 背景卡层（视觉深度） -->
+      <div id="doorCardBg" class="absolute inset-0 rounded-3xl bg-white"
+        style="transform:translateY(10px) scale(0.93);box-shadow:0 8px 32px rgba(0,0,0,.07);border-radius:24px"></div>
+      <!-- 主卡 -->
+      <div id="doorCard" class="absolute inset-0 rounded-3xl overflow-hidden"
+        style="box-shadow:0 16px 48px rgba(0,0,0,.13);touch-action:none;user-select:none;cursor:grab;border-radius:24px">
+      </div>
+      <!-- 滑动反馈 overlay -->
+      <div id="doorSwipeHint" class="absolute inset-0 pointer-events-none flex items-center justify-center opacity-0"
+        style="z-index:10;border-radius:24px;transition:opacity .12s"></div>
+    </div>
+  </div>
+
+  <!-- 操作按钮 -->
+  <div class="flex-shrink-0 flex justify-center items-center gap-10 px-5 pb-10 pt-3">
+    <button onclick="rateCard('pass')"
+      class="w-14 h-14 rounded-full bg-white flex items-center justify-center text-2xl active:scale-85 transition-transform"
+      style="box-shadow:0 4px 20px rgba(0,0,0,.1)">
+      <span style="filter:grayscale(1);opacity:.7">✕</span>
+    </button>
+    <button onclick="rateCard('like')"
+      class="w-16 h-16 rounded-full flex items-center justify-center text-3xl active:scale-85 transition-transform"
+      style="background:linear-gradient(135deg,#fbbf24,#f97316);box-shadow:0 8px 28px rgba(251,140,36,.45)">
+      ❤️
+    </button>
+  </div>
+
+</div>
+
+<!-- 已喜欢面板 -->
+<div id="likedPanel" class="fixed inset-0 hidden" style="z-index:110;background:rgba(0,0,0,.5);backdrop-filter:blur(6px)">
+  <div class="absolute inset-x-0 bottom-0 bg-white rounded-t-3xl"
+    style="max-height:76vh;overflow-y:auto;padding-bottom:env(safe-area-inset-bottom,24px)">
+    <div class="sticky top-0 bg-white/95 backdrop-blur flex items-center justify-between px-5 pt-5 pb-3 border-b border-gray-100">
+      <p class="font-semibold text-gray-700">❤️ 我喜欢的微光</p>
+      <button onclick="document.getElementById('likedPanel').style.display='none'" class="text-cement-gray text-xl w-7 h-7 flex items-center justify-center">×</button>
+    </div>
+    <div id="likedCardsList" class="p-4 space-y-3"></div>
+  </div>
+</div>
+
+<script>
+  // ══════════════════════════════════
+  // 初始化
+  // ══════════════════════════════════
+  const adjectives = ['想开摆的','躺平的','摆烂的','苟着的','佛系的','划水的','摸鱼的'];
+  const nouns = ['咸鱼','蒲公英','仙人掌','树懒','考拉','熊猫','猫咪','水母'];
+
+  function rndItem(arr) { return arr[Math.floor(Math.random() * arr.length)]; }
+
+  function generateNickname() {
+    return `${rndItem(adjectives)}${rndItem(nouns)}${Math.floor(Math.random()*9999)+1}号`;
+  }
+
+  document.getElementById('nickname').textContent = generateNickname();
+
+  let checkinCount = Math.floor(Math.random() * 5000) + 1200;
+  document.getElementById('checkinCount').textContent = checkinCount.toLocaleString();
+
+  // ══════════════════════════════════
+  // 苟着广场
+  // ══════════════════════════════════
+  const activities = [];
+  const activityFeed = document.getElementById('activityFeed');
+
+  const allActions = [
+    { text:'成功躺平了', emoji:'🛏️' },
+    { text:'外卖续命了', emoji:'🍜' },
+    { text:'敲了木鱼', emoji:'🪵' },
+    { text:'焚化了负能量', emoji:'🔥' },
+    { text:'捏爆了一排泡泡', emoji:'💭' },
+    { text:'撕掉了讨厌的日子', emoji:'📅' },
+    { text:'社交装死了', emoji:'😶' },
+    { text:'摸鱼成功', emoji:'🐟' },
+    { text:'今天也活下来了', emoji:'✊' },
+    { text:'对着屏幕发了5分钟呆', emoji:'😑' },
+  ];
+
+  let tickerIdx = 0;
+
+  function addActivity(text, emoji, isReal = false) {
+    activities.unshift({
+      nickname: isReal ? document.getElementById('nickname').textContent : generateNickname(),
+      text, emoji, isReal,
+      time: new Date().toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})
+    });
+    if (activities.length > 50) activities.pop();
+    renderActivities();
+    // 实时更新 ticker
+    showTickerItem(activities[0]);
+  }
+
+  function showTickerItem(a) {
+    const cur = document.getElementById('tickerCurrent');
+    const nxt = document.getElementById('tickerNext');
+    const realDot = a.isReal ? '🟢 ' : '';
+    nxt.textContent = `${realDot}${a.emoji} ${a.nickname} ${a.text}`;
+    // 动画：cur 向上移出，nxt 从下滑入
+    cur.style.top = '-20px';
+    cur.style.opacity = '0';
+    nxt.style.top = '0';
+    nxt.style.opacity = '1';
+    setTimeout(() => {
+      cur.textContent = nxt.textContent;
+      cur.style.transition = 'none';
+      cur.style.top = '0';
+      cur.style.opacity = '1';
+      cur.style.transition = 'all 0.5s ease';
+      nxt.style.top = '20px';
+      nxt.style.opacity = '0';
+    }, 550);
+  }
+
+  function renderActivities() {
+    activityFeed.innerHTML = activities.map(a => `
+      <div class="activity-item flex items-center gap-2 px-2 py-1.5 rounded-lg ${a.isReal ? 'bg-green-50/50' : 'hover:bg-warm-beige/50'} transition-colors">
+        ${a.isReal ? '<span class="w-1.5 h-1.5 bg-green-400 rounded-full flex-shrink-0"></span>' : ''}
+        <span class="text-base flex-shrink-0">${a.emoji}</span>
+        <span class="text-xs text-cement-gray flex-1 truncate">
+          <span class="${a.isReal ? 'text-green-600' : 'text-evening-blue'} font-medium">${a.nickname}</span> ${a.text}
+        </span>
+        <span class="text-xs text-cement-gray/50 flex-shrink-0">${a.time}</span>
+      </div>
+    `).join('');
+  }
+
+  // 初始化广场
+  for (let i = 0; i < 8; i++) {
+    const a = allActions[Math.floor(Math.random() * allActions.length)];
+    activities.push({
+      nickname: generateNickname(),
+      text: a.text, emoji: a.emoji, isReal: false,
+      time: new Date(Date.now() - (8-i) * 45000).toLocaleTimeString('zh-CN',{hour:'2-digit',minute:'2-digit'})
+    });
+  }
+  renderActivities();
+  if (activities.length) showTickerItem(activities[0]);
+
+  // 自动轮播 ticker（无新活动时）
+  setInterval(() => {
+    if (activities.length === 0) return;
+    tickerIdx = (tickerIdx + 1) % activities.length;
+    showTickerItem(activities[tickerIdx]);
+  }, 5000);
+
+  // 随机模拟活动 (8~15秒)
+  ;(function scheduleActivity() {
+    setTimeout(() => {
+      const a = allActions[Math.floor(Math.random() * allActions.length)];
+      addActivity(a.text, a.emoji, false);
+      scheduleActivity();
+    }, 8000 + Math.random() * 7000);
+  })();
+
+  // ══════════════════════════════════
+  // 打卡功能
+  // ══════════════════════════════════
+  function checkin(btn, type, emoji) {
+    checkinCount++;
+    checkinDoneToday++;
+    document.getElementById('checkinCount').textContent = checkinCount.toLocaleString();
+
+    // 更新已打卡标记
+    const badge = document.getElementById('checkinDoneCount');
+    badge.textContent = `已打${checkinDoneToday}卡`;
+    badge.classList.remove('hidden');
+
+    // 按钮绿色反馈
+    btn.classList.add('bg-green-50', 'border', 'border-green-200');
+    setTimeout(() => btn.classList.remove('bg-green-50','border','border-green-200'), 1200);
+
+    showToast(`${emoji} ${type}，苟住了`);
+    addActivity(`${type}了`, emoji, true);
+  }
+
+  // ══════════════════════════════════
+  // 粒子系统
+  // ══════════════════════════════════
+  function createParticles(x, y, color, count, spread = 60) {
+    for (let i = 0; i < count; i++) {
+      const p = document.createElement('div');
+      p.className = 'particle';
+      p.style.cssText = `left:${x}px;top:${y}px;background:${color};`;
+      const angle = (Math.PI * 2 * i) / count + Math.random() * .5;
+      const v = spread * (.6 + Math.random() * .8);
+      p.style.setProperty('--tx', Math.cos(angle)*v+'px');
+      p.style.setProperty('--ty', Math.sin(angle)*v+'px');
+      document.body.appendChild(p);
+      setTimeout(() => p.remove(), 1000);
+    }
+  }
+
+  // ══════════════════════════════════
+  // 游戏切换
+  // ══════════════════════════════════
+  let currentGame = 0;
+
+  function switchGame(idx) {
+    document.getElementById(`game-${currentGame}`).classList.add('hidden');
+    document.getElementById(`game-${idx}`).classList.remove('hidden');
+    document.getElementById(`game-${idx}`).classList.remove('game-panel');
+    void document.getElementById(`game-${idx}`).offsetWidth;
+    document.getElementById(`game-${idx}`).classList.add('game-panel');
+    document.querySelectorAll('.game-nav-btn').forEach((b, i) => {
+      b.classList.toggle('active', i === idx);
+    });
+    currentGame = idx;
+    if (idx === 4) initCrackCanvas();
+    // 离开呼吸游戏时停止
+    if (idx !== 6 && breathingActive) stopBreathing();
+  }
+
+  // ══════════════════════════════════
+  // 游戏0：电子木鱼
+  // ══════════════════════════════════
+  let woodenFishCount = 0;
+
+  function knockWoodenFish(e) {
+    woodenFishCount++;
+    document.getElementById('woodenFishCount').textContent = woodenFishCount;
+
+    const btn = document.getElementById('fishBtn');
+    btn.classList.remove('fish-hit');
+    void btn.offsetWidth;
+    btn.classList.add('fish-hit');
+    setTimeout(() => btn.classList.remove('fish-hit'), 400);
+
+    createParticles(e.clientX, e.clientY, '#fbbf24', 16, 55);
+    playKnockSound();
+
+    if (woodenFishCount % 10 === 0) addActivity(`敲了${woodenFishCount}下木鱼`, '🪵', true);
+  }
+
+  function playKnockSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const now = ctx.currentTime;
+
+      // 1. 击打噪声（木头碰撞的"咔"）
+      const hitBuf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.012), ctx.sampleRate);
+      const hitData = hitBuf.getChannelData(0);
+      for (let i = 0; i < hitData.length; i++) hitData[i] = (Math.random()*2-1) * Math.pow(1-i/hitData.length, 2);
+      const hitSrc = ctx.createBufferSource();
+      const hitG = ctx.createGain();
+      hitSrc.buffer = hitBuf; hitSrc.connect(hitG); hitG.connect(ctx.destination);
+      hitG.gain.value = 0.55; hitSrc.start(now);
+
+      // 2. 空腔共鸣主音（空心木的"咚"）
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'bandpass'; filt.frequency.value = 720; filt.Q.value = 10;
+      const o1 = ctx.createOscillator();
+      const o2 = ctx.createOscillator();
+      const mainG = ctx.createGain();
+      o1.type = 'sine'; o1.frequency.setValueAtTime(720, now); o1.frequency.exponentialRampToValueAtTime(580, now+0.18);
+      o2.type = 'sine'; o2.frequency.setValueAtTime(1440, now); o2.frequency.exponentialRampToValueAtTime(1160, now+0.1);
+      const o2G = ctx.createGain(); o2G.gain.value = 0.28;
+      o1.connect(filt); o2.connect(o2G); o2G.connect(filt); filt.connect(mainG); mainG.connect(ctx.destination);
+      mainG.gain.setValueAtTime(0.45, now);
+      mainG.gain.exponentialRampToValueAtTime(0.001, now + 0.9);
+      o1.start(now); o1.stop(now + 0.9);
+      o2.start(now); o2.stop(now + 0.35);
+
+      // 3. 低频木质质感
+      const o3 = ctx.createOscillator();
+      const o3G = ctx.createGain();
+      o3.type = 'triangle'; o3.frequency.setValueAtTime(200, now); o3.frequency.exponentialRampToValueAtTime(140, now+0.06);
+      o3.connect(o3G); o3G.connect(ctx.destination);
+      o3G.gain.setValueAtTime(0.18, now); o3G.gain.exponentialRampToValueAtTime(0.001, now+0.12);
+      o3.start(now); o3.stop(now+0.12);
+    } catch(e) {}
+  }
+
+  // ══════════════════════════════════
+  // 游戏1：小本本
+  // ══════════════════════════════════
+  document.getElementById('rantInput').addEventListener('input', function() {
+    document.getElementById('charCount').textContent = this.value.length;
+  });
+
+  let tornCardCount = 0;
+  let noteTearing = false;
+
+  function tearNotecard() {
+    if (noteTearing) return;
+    const input = document.getElementById('rantInput');
+    const text = input.value.trim();
+    if (!text) { showToast('写点什么再撕'); return; }
+
+    noteTearing = true;
+    const overlay = document.getElementById('noteTearOverlay');
+
+    // ── 生成"那页纸"（有格线的本子纸样式）──
+    const cardBase = `
+      position:absolute;inset:0;
+      background:#faf8f2;
+      background-image:repeating-linear-gradient(transparent 0px,transparent 27px,rgba(100,116,139,.13) 27px,rgba(100,116,139,.13) 28px);
+      background-size:100% 28px;
+      padding:8px 18px 8px 54px;
+      font-size:13px;line-height:28px;
+      color:#374151;overflow:hidden;
+      box-shadow:0 4px 20px rgba(0,0,0,.18);
+    `;
+
+    // 锯齿撕裂裂口（中间斜线）
+    const jagLeft  = 'polygon(0 0, 49% 0, 53% 15%, 47% 30%, 52% 48%, 47% 65%, 52% 82%, 49% 100%, 0 100%)';
+    const jagRight = 'polygon(49% 0,100% 0,100% 100%, 49% 100%, 52% 82%, 47% 65%, 52% 48%, 47% 30%, 53% 15%)';
+
+    const leftHalf  = document.createElement('div');
+    const rightHalf = document.createElement('div');
+    leftHalf.style.cssText  = cardBase + `clip-path:${jagLeft}`;
+    rightHalf.style.cssText = cardBase + `clip-path:${jagRight}`;
+    // 红线
+    [leftHalf, rightHalf].forEach(h => {
+      const line = document.createElement('div');
+      line.style.cssText = 'position:absolute;left:44px;top:0;bottom:0;width:1.5px;background:rgba(239,68,68,.22);pointer-events:none';
+      h.appendChild(line);
+      const t = document.createElement('div');
+      t.style.cssText = 'position:relative;z-index:1;font-weight:500;white-space:pre-wrap;word-break:break-all';
+      t.textContent = text;
+      h.appendChild(t);
+    });
+
+    overlay.style.display = 'block';
+    overlay.appendChild(leftHalf);
+    overlay.appendChild(rightHalf);
+
+    // 粒子
+    const r = overlay.getBoundingClientRect();
+    createParticles(r.left + r.width/2, r.top + r.height/2, '#fca5a5', 18, 65);
+    playTearSound();
+
+    // 稍微能看清内容（150ms）再触发撕裂
+    setTimeout(() => {
+      leftHalf.classList.add('card-tearing-left');
+      rightHalf.classList.add('card-tearing-right');
+    }, 150);
+
+    setTimeout(() => {
+      tornCardCount++;
+      document.getElementById('tornCardCount').textContent = tornCardCount;
+      input.value = '';
+      document.getElementById('charCount').textContent = '0';
+      overlay.style.display = 'none';
+      overlay.innerHTML = '';
+      noteTearing = false;
+    }, 800);
+
+    showToast('✂️ 记住了，也撕掉了');
+    addActivity('在小本本上撕了一页', '📓', true);
+  }
+
+  // ══════════════════════════════════
+  // 游戏2：捏泡泡纸（保持压扁状态）
+  // ══════════════════════════════════
+  let poppedCount = 0;
+  const TOTAL_BUBBLES = 36;
+
+  function createBubbles() {
+    const wrap = document.getElementById('bubbleWrap');
+    poppedCount = 0;
+    document.getElementById('poppedCount').textContent = '0';
+    document.getElementById('bubbleAllPopped').classList.add('hidden');
+    wrap.innerHTML = '';
+    for (let i = 0; i < TOTAL_BUBBLES; i++) {
+      const b = document.createElement('div');
+      b.className = 'bubble';
+      b.addEventListener('pointerdown', function(e) {
+        e.preventDefault();
+        if (this.classList.contains('popped')) return;
+        this.classList.add('popped');
+        poppedCount++;
+        document.getElementById('poppedCount').textContent = poppedCount;
+        const r = this.getBoundingClientRect();
+        // 小粒子，不遮挡视野
+        createParticles(r.left+r.width/2, r.top+r.height/2, '#93c5fd', 5, 20);
+        playPopSound();
+        if (poppedCount % 12 === 0) addActivity(`捏爆了${poppedCount}个泡泡`, '💭', true);
+        if (poppedCount === TOTAL_BUBBLES) {
+          setTimeout(() => {
+            document.getElementById('bubbleAllPopped').classList.remove('hidden');
+            addActivity('把整板泡泡纸捏完了', '🎉', true);
+          }, 300);
+        }
+      });
+      wrap.appendChild(b);
+    }
+  }
+
+  function playPopSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // 短促破裂噪声 + 泄气高频
+      const buf = ctx.createBuffer(1, Math.floor(ctx.sampleRate * 0.025), ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/d.length, 1.5);
+      const src = ctx.createBufferSource();
+      const filt = ctx.createBiquadFilter();
+      const g = ctx.createGain();
+      filt.type = 'highpass'; filt.frequency.value = 1200;
+      src.buffer = buf; src.connect(filt); filt.connect(g); g.connect(ctx.destination);
+      g.gain.value = 0.22; src.start();
+    } catch(e) {}
+  }
+
+  createBubbles();
+
+  // ══════════════════════════════════
+  // 游戏3：撕日历（情绪标签版）
+  // ══════════════════════════════════
+  let tornCount = 0;
+  let currentMood = { label:'烦人的日子', colors:['#f87171','#ef4444'] };
+
+  function setCalendarMood(btn, label, colors) {
+    currentMood = { label: label+'的日子', colors };
+    document.getElementById('calendarMoodLabel').textContent = currentMood.label;
+    const cal = document.getElementById('calendar');
+    cal.style.background = `linear-gradient(135deg, ${colors[0]}, ${colors[1]})`;
+    // 高亮选中标签
+    document.querySelectorAll('.mood-tag').forEach(b => {
+      b.style.fontWeight = b === btn ? '700' : '';
+      b.style.transform = b === btn ? 'scale(1.08)' : '';
+    });
+  }
+
+  function tearCalendar() {
+    const cal = document.getElementById('calendar');
+    if (cal.classList.contains('tearing')) return;
+
+    cal.classList.add('tearing');
+    const r = cal.getBoundingClientRect();
+    const color = currentMood.colors[1] || '#ef4444';
+    createParticles(r.left+r.width/2, r.top+r.height/2, color, 28, 90);
+    playTearSound();
+
+    setTimeout(() => {
+      tornCount++;
+      document.getElementById('tornCount').textContent = tornCount;
+      // 下一天换随机日期
+      document.getElementById('calendarDay').textContent = Math.floor(Math.random()*28)+1;
+      cal.classList.remove('tearing');
+      cal.style.transform = '';
+      cal.style.opacity = '';
+    }, 820);
+
+    showToast(`📅 撕掉了！${currentMood.label.replace('的日子','')}—再见！`);
+    addActivity(`撕掉了${currentMood.label}`, '📅', true);
+  }
+
+  function playTearSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const buf = ctx.createBuffer(1, ctx.sampleRate * .3, ctx.sampleRate);
+      const data = buf.getChannelData(0);
+      for (let i = 0; i < data.length; i++) data[i] = (Math.random()*2-1) * (1 - i/data.length);
+      const src = ctx.createBufferSource();
+      const g = ctx.createGain();
+      src.buffer = buf;
+      src.connect(g); g.connect(ctx.destination);
+      g.gain.value = .3;
+      src.start();
+    } catch(e) {}
+  }
+
+  // ══════════════════════════════════
+  // 游戏4：裂屏
+  // ══════════════════════════════════
+  let crackCount = 0;
+  let crackLines = [];   // [{x1,y1,x2,y2,alpha}]
+  let crackCtx = null;
+  let crackCanvas = null;
+
+  function initCrackCanvas() {
+    crackCanvas = document.getElementById('crackCanvas');
+    const container = crackCanvas.parentElement;
+    crackCanvas.width  = container.clientWidth;
+    crackCanvas.height = container.clientHeight;
+    crackCtx = crackCanvas.getContext('2d');
+    drawBackground();
+    crackLines.forEach(l => drawCrack(l));
+
+    crackCanvas.addEventListener('pointerdown', onCrackClick, { passive: true });
+  }
+
+  function drawBackground() {
+    if (!crackCtx) return;
+    const w = crackCanvas.width, h = crackCanvas.height;
+    // 深色玻璃背景
+    const grad = crackCtx.createLinearGradient(0, 0, w, h);
+    grad.addColorStop(0, '#1a1a2e');
+    grad.addColorStop(1, '#16213e');
+    crackCtx.fillStyle = grad;
+    crackCtx.fillRect(0, 0, w, h);
+  }
+
+  function onCrackClick(e) {
+    const rect = crackCanvas.getBoundingClientRect();
+    const x = (e.clientX - rect.left) * (crackCanvas.width / rect.width);
+    const y = (e.clientY - rect.top)  * (crackCanvas.height / rect.height);
+    addCrack(x, y);
+  }
+
+  function addCrack(cx, cy) {
+    crackCount++;
+    document.getElementById('crackCount').textContent = crackCount;
+
+    // 从点击点向外辐射 6~9 条主裂纹
+    const numRays = 6 + Math.floor(Math.random() * 4);
+    const newLines = [];
+
+    for (let r = 0; r < numRays; r++) {
+      const baseAngle = (Math.PI * 2 * r) / numRays + (Math.random() - .5) * .4;
+      const len = 40 + Math.random() * 80;
+      let x = cx, y = cy;
+      // 每条主裂纹由 3~5 段折线组成
+      const segs = 3 + Math.floor(Math.random() * 3);
+      let angle = baseAngle;
+      for (let s = 0; s < segs; s++) {
+        const segLen = len / segs * (.7 + Math.random() * .6);
+        const nx = x + Math.cos(angle) * segLen;
+        const ny = y + Math.sin(angle) * segLen;
+        newLines.push({ x1: x, y1: y, x2: nx, y2: ny });
+        x = nx; y = ny;
+        angle += (Math.random() - .5) * .6; // 微弯曲
+        // 20% 概率分叉
+        if (Math.random() < .25) {
+          const branchAngle = angle + (Math.random() - .5) * 1.2;
+          const bLen = segLen * (.4 + Math.random() * .4);
+          newLines.push({ x1: x, y1: y, x2: x + Math.cos(branchAngle)*bLen, y2: y + Math.sin(branchAngle)*bLen });
+        }
+      }
+    }
+
+    // 增量绘制新裂纹（带动画：逐段出现）
+    newLines.forEach((line, i) => {
+      crackLines.push(line);
+      setTimeout(() => drawCrack(line), i * 18);
+    });
+
+    // 撞击点白光闪烁
+    setTimeout(() => {
+      crackCtx.beginPath();
+      const grd = crackCtx.createRadialGradient(cx, cy, 0, cx, cy, 18);
+      grd.addColorStop(0, 'rgba(255,255,255,.9)');
+      grd.addColorStop(1, 'rgba(255,255,255,0)');
+      crackCtx.fillStyle = grd;
+      crackCtx.arc(cx, cy, 18, 0, Math.PI * 2);
+      crackCtx.fill();
+      setTimeout(() => { drawBackground(); crackLines.forEach(l => drawCrack(l)); }, 150);
+    }, 0);
+
+    playCrackSound();
+    addActivity('把手机屏幕砸碎了', '📱', true);
+
+    // 超过15下，显示"碎了"遮罩
+    if (crackCount >= 15) {
+      document.getElementById('crackOverlay').style.opacity = '1';
+    }
+  }
+
+  function drawCrack(line) {
+    if (!crackCtx) return;
+    crackCtx.beginPath();
+    crackCtx.moveTo(line.x1, line.y1);
+    crackCtx.lineTo(line.x2, line.y2);
+    // 白色高光边
+    crackCtx.strokeStyle = 'rgba(255,255,255,0.7)';
+    crackCtx.lineWidth = 1.5;
+    crackCtx.stroke();
+    // 深色裂缝主体（稍偏移模拟深度）
+    crackCtx.beginPath();
+    crackCtx.moveTo(line.x1 + .5, line.y1 + .5);
+    crackCtx.lineTo(line.x2 + .5, line.y2 + .5);
+    crackCtx.strokeStyle = 'rgba(0,0,0,0.85)';
+    crackCtx.lineWidth = 1;
+    crackCtx.stroke();
+  }
+
+  function resetCracks() {
+    crackLines = [];
+    crackCount = 0;
+    document.getElementById('crackCount').textContent = '0';
+    document.getElementById('crackOverlay').style.opacity = '0';
+    drawBackground();
+    // 修复音效
+    playRepairSound();
+    showToast('✨ 修好了，继续砸');
+  }
+
+  function playCrackSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // 白噪声爆裂声
+      const buf = ctx.createBuffer(1, ctx.sampleRate * .12, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random() * 2 - 1) * Math.pow(1 - i / d.length, 2);
+      const src = ctx.createBufferSource();
+      const g = ctx.createGain();
+      const filt = ctx.createBiquadFilter();
+      filt.type = 'highpass';
+      filt.frequency.value = 2000;
+      src.buffer = buf;
+      src.connect(filt); filt.connect(g); g.connect(ctx.destination);
+      g.gain.setValueAtTime(.6, ctx.currentTime);
+      g.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .12);
+      src.start();
+    } catch(e) {}
+  }
+
+  function playRepairSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      [880, 1100, 1320].forEach((freq, i) => {
+        const o = ctx.createOscillator(), g = ctx.createGain();
+        o.connect(g); g.connect(ctx.destination);
+        o.type = 'sine'; o.frequency.value = freq;
+        const t = ctx.currentTime + i * .08;
+        g.gain.setValueAtTime(0, t);
+        g.gain.linearRampToValueAtTime(.2, t + .04);
+        g.gain.exponentialRampToValueAtTime(.001, t + .25);
+        o.start(t); o.stop(t + .25);
+      });
+    } catch(e) {}
+  }
+
+  // ══════════════════════════════════
+  // 游戏5：气球爆炸
+  // ══════════════════════════════════
+  let inflating = false;
+  let inflateSize = 80;       // 初始宽度 px
+  let inflateTimer = null;
+  let burstCount = 0;
+  const MAX_SIZE = 220;       // 超过此尺寸必爆
+  const DANGER_SIZE = 180;    // 超过此尺寸进入危险区
+
+  function startInflate(e) {
+    e.preventDefault();
+    inflating = true;
+    inflateTimer = setInterval(doInflate, 40);
+  }
+
+  function stopInflate(e) {
+    if (!inflating) return;
+    inflating = false;
+    clearInterval(inflateTimer);
+    // 松手飞走
+    const balloon = document.getElementById('balloon');
+    if (inflateSize < DANGER_SIZE) {
+      flyAway(balloon);
+    }
+  }
+
+  function doInflate() {
+    inflateSize += 3 + inflateSize * .012; // 越大膨胀越快
+    const balloon = document.getElementById('balloon');
+    const w = Math.min(inflateSize, MAX_SIZE);
+    const h = w * 1.2;
+    balloon.style.width  = w + 'px';
+    balloon.style.height = h + 'px';
+    balloon.style.fontSize = (w * .7) + 'px';
+
+    // 危险状态震动
+    if (inflateSize > DANGER_SIZE) {
+      balloon.style.filter = `hue-rotate(${Math.sin(Date.now()*.02)*30}deg) saturate(2)`;
+      balloon.style.transform = `scale(${1 + Math.sin(Date.now()*.05)*.03})`;
+    }
+
+    // 超过最大值：爆炸
+    if (inflateSize >= MAX_SIZE) {
+      clearInterval(inflateTimer);
+      inflating = false;
+      burstBalloon(balloon);
+    }
+  }
+
+  function flyAway(balloon) {
+    const startSize = inflateSize;
+    balloon.style.transition = 'transform 1.2s cubic-bezier(.2,-0.5,.8,1.3), opacity 1s ease';
+    balloon.style.transform = `translateY(-300px) rotate(${(Math.random()-.5)*60}deg) scale(.5)`;
+    balloon.style.opacity = '0';
+    playLeakSound(startSize);
+    setTimeout(() => {
+      resetBalloon(balloon);
+      showToast('🎈 飞走了～');
+    }, 1200);
+  }
+
+  function burstBalloon(balloon) {
+    burstCount++;
+    document.getElementById('burstCount').textContent = burstCount;
+
+    // 气球瞬间消失
+    balloon.style.opacity = '0';
+    balloon.style.transform = 'scale(0)';
+
+    // 彩色碎片爆炸（在容器内）
+    const colors = ['#f43f5e','#a855f7','#3b82f6','#f59e0b','#10b981','#ec4899'];
+    const container = document.getElementById('balloonBurst');
+    const cx = container.clientWidth / 2;
+    const cy = container.clientHeight / 2;
+
+    for (let i = 0; i < 30; i++) {
+      const piece = document.createElement('div');
+      const color = colors[Math.floor(Math.random() * colors.length)];
+      const size = 6 + Math.random() * 12;
+      const angle = Math.random() * Math.PI * 2;
+      const dist  = 60 + Math.random() * 120;
+      piece.style.cssText = `
+        position:absolute; left:${cx}px; top:${cy}px;
+        width:${size}px; height:${size}px;
+        background:${color}; border-radius:${Math.random()>.5?'50%':'3px'};
+        pointer-events:none;
+        --tx:${Math.cos(angle)*dist}px; --ty:${Math.sin(angle)*dist}px;
+        animation: explode .9s ease-out forwards;
+      `;
+      container.appendChild(piece);
+      setTimeout(() => piece.remove(), 950);
+    }
+
+    playBurstSound();
+    addActivity('气球爆炸了！', '🎈', true);
+    showToast('💥 爆了！解压成功！');
+
+    setTimeout(() => {
+      resetBalloon(balloon);
+    }, 900);
+  }
+
+  function resetBalloon(balloon) {
+    inflateSize = 80;
+    balloon.style.transition = 'none';
+    balloon.style.opacity = '1';
+    balloon.style.transform = '';
+    balloon.style.filter = '';
+    balloon.style.width  = '80px';
+    balloon.style.height = '96px';
+    balloon.style.fontSize = '64px';
+    // 随机换颜色
+    const emojis = ['🎈','🎈','🎈','🎀','🫧'];
+    balloon.textContent = emojis[Math.floor(Math.random() * emojis.length)];
+  }
+
+  function playLeakSound(size) {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const buf = ctx.createBuffer(1, ctx.sampleRate * .8, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/d.length, .5) * .3;
+      const src = ctx.createBufferSource();
+      const filt = ctx.createBiquadFilter();
+      const g = ctx.createGain();
+      filt.type = 'bandpass'; filt.frequency.value = 1500 + size * 2; filt.Q.value = 2;
+      src.buffer = buf; src.connect(filt); filt.connect(g); g.connect(ctx.destination);
+      g.gain.value = .4;
+      src.start();
+    } catch(e) {}
+  }
+
+  function playBurstSound() {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      // 爆炸噪声
+      const buf = ctx.createBuffer(1, ctx.sampleRate * .2, ctx.sampleRate);
+      const d = buf.getChannelData(0);
+      for (let i = 0; i < d.length; i++) d[i] = (Math.random()*2-1) * Math.pow(1-i/d.length, 1.5);
+      const src = ctx.createBufferSource();
+      const g = ctx.createGain();
+      src.buffer = buf; src.connect(g); g.connect(ctx.destination);
+      g.gain.value = .8; src.start();
+      // 低频冲击
+      const o = ctx.createOscillator(), g2 = ctx.createGain();
+      o.connect(g2); g2.connect(ctx.destination);
+      o.type = 'sine'; o.frequency.setValueAtTime(120, ctx.currentTime);
+      o.frequency.exponentialRampToValueAtTime(20, ctx.currentTime + .2);
+      g2.gain.setValueAtTime(.5, ctx.currentTime);
+      g2.gain.exponentialRampToValueAtTime(.001, ctx.currentTime + .2);
+      o.start(); o.stop(ctx.currentTime + .2);
+    } catch(e) {}
+  }
+
+  // ══════════════════════════════════
+  // Toast 提示
+  // ══════════════════════════════════
+  function showToast(msg) {
+    const t = document.createElement('div');
+    t.className = 'fixed top-5 left-1/2 -translate-x-1/2 bg-gray-800/90 text-white text-sm px-5 py-2.5 rounded-full shadow-xl z-50 pointer-events-none';
+    t.textContent = msg;
+    document.body.appendChild(t);
+    setTimeout(() => {
+      t.style.transition = 'opacity .3s';
+      t.style.opacity = '0';
+      setTimeout(() => t.remove(), 300);
+    }, 1600);
+  }
+
+  // ══════════════════════════════════
+  // 微光瞬间
+  // ══════════════════════════════════
+  let currentImageData = null;
+  let selectedTag = '';
+  let glimmers = JSON.parse(localStorage.getItem('glimmers') || '[]');
+
+  function previewImage(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      currentImageData = e.target.result;
+      document.getElementById('imagePreviewArea').innerHTML =
+        `<img src="${currentImageData}" class="image-preview">`;
+    };
+    reader.readAsDataURL(file);
+  }
+
+  function selectTag(btn, tag) {
+    selectedTag = tag;
+    document.querySelectorAll('.tag-btn').forEach(b => {
+      b.classList.toggle('bg-amber-400', b === btn);
+      b.classList.toggle('text-white', b === btn);
+      b.classList.toggle('border-amber-400', b === btn);
+    });
+  }
+
+  function shareGlimmer() {
+    const caption = document.getElementById('glimmerCaption').value.trim();
+    if (!currentImageData) { showToast('先上传一张照片'); return; }
+    if (!caption) { showToast('加一句描述吧'); return; }
+
+    glimmers.unshift({
+      id: Date.now(),
+      image: currentImageData,
+      caption,
+      tag: selectedTag || '#今天的小确幸',
+      time: new Date().toLocaleDateString('zh-CN', {month:'long',day:'numeric'})
+    });
+    if (glimmers.length > 20) glimmers = glimmers.slice(0, 20);
+    localStorage.setItem('glimmers', JSON.stringify(glimmers));
+    renderGlimmers();
+
+    // 重置表单
+    currentImageData = null;
+    document.getElementById('glimmerImage').value = '';
+    document.getElementById('glimmerCaption').value = '';
+    document.getElementById('imagePreviewArea').innerHTML =
+      `<div class="p-8 text-center"><div class="text-4xl mb-2">📸</div><div class="text-sm text-cement-gray">点击上传一张今天的微光</div></div>`;
+    document.querySelectorAll('.tag-btn').forEach(b => {
+      b.classList.remove('bg-amber-400','text-white','border-amber-400');
+    });
+    selectedTag = '';
+    // 关闭上传面板，提示已入池
+    const uploadArea = document.getElementById('glimmerUploadArea');
+    uploadArea.classList.add('hidden');
+    document.getElementById('glimmerUploadIcon').textContent = '＋';
+    showToast('✨ 微光已投入卡片池！');
+    addActivity('分享了微光瞬间', '✨', true);
+  }
+
+  // ══════════════════════════════════
+  // 打卡折叠
+  // ══════════════════════════════════
+  let checkinDoneToday = 0;
+
+  function toggleCheckin() {
+    const grid = document.getElementById('checkinGrid');
+    const icon = document.getElementById('checkinToggleIcon');
+    const isOpen = !grid.classList.contains('hidden');
+    grid.classList.toggle('hidden', isOpen);
+    icon.textContent = isOpen ? '＋' : '－';
+  }
+
+  // ══════════════════════════════════
+  // 广场展开
+  // ══════════════════════════════════
+  function toggleFeedExpand() {
+    const panel = document.getElementById('feedPanel');
+    panel.classList.toggle('hidden');
+  }
+
+  // ══════════════════════════════════
+  // 微光上传折叠
+  // ══════════════════════════════════
+  function toggleGlimmerUpload() {
+    const area = document.getElementById('glimmerUploadArea');
+    const icon = document.getElementById('glimmerUploadIcon');
+    const isOpen = !area.classList.contains('hidden');
+    area.classList.toggle('hidden', isOpen);
+    icon.textContent = isOpen ? '＋' : '－';
+  }
+
+  // ══════════════════════════════════
+  // 微光分享（Web Share API）
+  // ══════════════════════════════════
+  function shareGlimmerCard(id) {
+    const g = glimmers.find(x => x.id === id);
+    if (!g) return;
+    if (navigator.share) {
+      navigator.share({
+        title: '苟住了 · 微光瞬间',
+        text: `${g.caption}\n${g.tag}\n— 来自「苟住了」`,
+        url: window.location.href
+      }).catch(() => {});
+    } else if (navigator.clipboard) {
+      navigator.clipboard.writeText(`${g.caption} ${g.tag} — 来自「苟住了」`)
+        .then(() => showToast('📋 已复制，去分享吧'));
+    } else {
+      showToast('长按图片可以保存分享');
+    }
+  }
+
+  // ══════════════════════════════════
+  // 游戏6：呼吸冥想
+  // ══════════════════════════════════
+  let breathingActive = false;
+  let breathTimer = null;
+  let breathCountTimer = null;
+  let breathRoundsCount = 0;
+  let breathCurrentPhase = 0;
+
+  const BREATH_PHASES = [
+    { text: '吸气...', duration: 4,  size: 155, shadow: '0 0 28px 8px rgba(123,143,161,0.45)' },
+    { text: '屏住...', duration: 7,  size: 155, shadow: '0 0 44px 16px rgba(123,143,161,0.6)' },
+    { text: '呼气...', duration: 8,  size: 90,  shadow: '0 0 8px 0px rgba(123,143,161,0.2)' },
+  ];
+
+  function toggleBreathing() {
+    if (breathingActive) {
+      stopBreathing();
+    } else {
+      startBreathing();
+    }
+  }
+
+  function startBreathing() {
+    breathingActive = true;
+    document.getElementById('breathStartBtn').textContent = '停止';
+    breathCurrentPhase = 0;
+    runBreathPhase(0);
+    addActivity('开始冥想呼吸了', '🫁');
+  }
+
+  function stopBreathing() {
+    breathingActive = false;
+    clearTimeout(breathTimer);
+    clearInterval(breathCountTimer);
+    document.getElementById('breathStartBtn').textContent = '开始呼吸';
+    document.getElementById('breathPhaseText').textContent = '点击开始';
+    document.getElementById('breathCountdown').textContent = '';
+    const ring = document.getElementById('breathRing');
+    ring.style.transition = 'width 0.8s ease, height 0.8s ease, box-shadow 0.8s ease';
+    ring.style.width = '100px';
+    ring.style.height = '100px';
+    ring.style.boxShadow = '0 0 0 0 rgba(123,143,161,0.4)';
+  }
+
+  function runBreathPhase(phaseIdx) {
+    if (!breathingActive) return;
+    const phase = BREATH_PHASES[phaseIdx];
+    const ring = document.getElementById('breathRing');
+    const dur = phase.duration;
+
+    // 呼气用 ease-in，其他 ease-out
+    const easing = phaseIdx === 2 ? 'ease-in' : 'ease-out';
+    ring.style.transition = `width ${dur}s ${easing}, height ${dur}s ${easing}, box-shadow ${dur}s ${easing}`;
+    ring.style.width  = phase.size + 'px';
+    ring.style.height = phase.size + 'px';
+    ring.style.boxShadow = phase.shadow;
+
+    document.getElementById('breathPhaseText').textContent = phase.text;
+
+    // 倒计时
+    let rem = dur;
+    document.getElementById('breathCountdown').textContent = rem;
+    clearInterval(breathCountTimer);
+    breathCountTimer = setInterval(() => {
+      rem--;
+      if (rem > 0) {
+        document.getElementById('breathCountdown').textContent = rem;
+      } else {
+        clearInterval(breathCountTimer);
+        document.getElementById('breathCountdown').textContent = '';
+      }
+    }, 1000);
+
+    breathTimer = setTimeout(() => {
+      const next = (phaseIdx + 1) % BREATH_PHASES.length;
+      if (next === 0) {
+        breathRoundsCount++;
+        document.getElementById('breathRounds').textContent = breathRoundsCount;
+        if (breathRoundsCount === 4) {
+          showToast('✨ 完成4个循环，感觉好一些了吗？');
+        }
+      }
+      runBreathPhase(next);
+    }, dur * 1000);
+  }
+
+  // ══════════════════════════════════
+  // 游戏导航：滑到底隐藏渐隐层
+  // ══════════════════════════════════
+  const gameNavEl = document.getElementById('gameNav');
+  const navFadeEl = document.getElementById('navFade');
+  gameNavEl.addEventListener('scroll', () => {
+    const atEnd = gameNavEl.scrollLeft + gameNavEl.clientWidth >= gameNavEl.scrollWidth - 4;
+    navFadeEl.style.opacity = atEnd ? '0' : '1';
+  });
+
+  // ══════════════════════════════════
+  // 微光时刻：内置卡片库
+  // ══════════════════════════════════
+  const BUILTIN_CARDS = [
+    { id:'b01', emoji:'🍜', text:'今天哪怕只是把自己喂饱，\n也是对这个世界的一种交代。', colors:['#FFF9F0','#FFF0DC'], textColor:'#92400e' },
+    { id:'b02', emoji:'🌿', text:'不是所有问题都要今天解决。\n先照顾好自己，其他的明天再说。', colors:['#F0FFF4','#DCFCE7'], textColor:'#166534' },
+    { id:'b03', emoji:'✨', text:'你已经在努力了。\n这件事本身，比你想象中更了不起。', colors:['#FFFBEB','#FEF3C7'], textColor:'#92400e' },
+    { id:'b04', emoji:'🌙', text:'疲惫也是一种勇气。\n它说明你一直都在撑着。', colors:['#1E1B4B','#312E81'], textColor:'#c7d2fe', dark:true },
+    { id:'b05', emoji:'☕', text:'一杯热茶，一首喜欢的歌，\n有时候这就够了。真的。', colors:['#FDF4FF','#FAE8FF'], textColor:'#7e22ce' },
+    { id:'b06', emoji:'🐱', text:'猫咪不在乎你今天有没有成就，\n它只是想蹭蹭你。', colors:['#FFF8F0','#FFE8CC'], textColor:'#9a3412' },
+    { id:'b07', emoji:'🐢', text:'慢下来也没关系。\n乌龟也能到终点，沿途风景还更多。', colors:['#ECFDF5','#D1FAE5'], textColor:'#065f46' },
+    { id:'b08', emoji:'⭐', text:'那些没被看见的努力，\n你自己知道就够了。\n星星不需要人鼓掌。', colors:['#0F172A','#1E293B'], textColor:'#fbbf24', dark:true },
+    { id:'b09', emoji:'🌅', text:'今天的太阳依然升起，\n它不在乎你做了什么，或没做什么。', colors:['#FEF9C3','#FDE68A'], textColor:'#78350f' },
+    { id:'b10', emoji:'🌙', text:'月亮不会因为阴天就消失，\n只是暂时被遮住了。\n等等，它还在。', colors:['#0C0A09','#1C1917'], textColor:'#fcd34d', dark:true },
+    { id:'b11', emoji:'🌱', text:'植物不急。它只是每天长一点点，\n然后某天，你突然看到花开了。', colors:['#F0FDF4','#DCFCE7'], textColor:'#166534' },
+    { id:'b12', emoji:'🌊', text:'海浪一直在来，一直在走，\n从不计较昨天的事。', colors:['#EFF6FF','#DBEAFE'], textColor:'#1e40af' },
+    { id:'b13', emoji:'🌻', text:'向日葵对着太阳，\n不是追求，\n只是本能地靠近温暖。你也可以。', colors:['#FEFCE8','#FEF9C3'], textColor:'#854d0e' },
+    { id:'b14', emoji:'💛', text:'不完美的你，\n在某个人眼里，\n可能正好是最好的那个版本。', colors:['#FFFBEB','#FEF3C7'], textColor:'#92400e' },
+    { id:'b15', emoji:'🐟', text:'有一种温柔，\n叫「今天也活过来了」。', colors:['#ECFEFF','#CFFAFE'], textColor:'#155e75' },
+    { id:'b16', emoji:'🌬️', text:'深呼吸。\n你的身体比你的情绪更冷静，\n相信它。', colors:['#F8FAFC','#F1F5F9'], textColor:'#475569' },
+    { id:'b17', emoji:'🛋️', text:'你已经做了很多了。\n今天可以休息。\n明天，再说。', colors:['#FDF2F8','#FCE7F3'], textColor:'#9d174d' },
+    { id:'b18', emoji:'🌌', text:'星星每晚都在，\n只是城市太亮让你忘了。\n它们一直都在。', colors:['#030712','#111827'], textColor:'#93c5fd', dark:true },
+    { id:'b19', emoji:'🍵', text:'清晨第一口茶的温度，\n是今天最小的幸福。', colors:['#F0FFF4','#DCFCE7'], textColor:'#166534' },
+    { id:'b20', emoji:'🌸', text:'春天的花不知道在等谁，\n但它还是开了。\n你也是。', colors:['#FFF1F2','#FFE4E6'], textColor:'#9f1239' },
+  ];
+
+  // ══════════════════════════════════
+  // 微光时刻：数据管理
+  // ══════════════════════════════════
+  let cardStats = JSON.parse(localStorage.getItem('cardStats') || '{}');
+  let likedCardIds = JSON.parse(localStorage.getItem('likedCardIds') || '[]');
+  let doorSeenToday = 0;
+  let currentDoorCard = null;
+  let doorSwipeEl = null;
+  let isDragging = false;
+  let dragStartX = 0;
+  let doorInited = false;
+
+  function getAllDoorCards() {
+    const userCards = glimmers.map(g => ({
+      id: `u_${g.id}`,
+      type: 'user',
+      image: g.image,
+      text: g.caption,
+      tag: g.tag,
+    }));
+    return [...BUILTIN_CARDS.map(c => ({ ...c, type:'builtin' })), ...userCards];
+  }
+
+  function getCardWeight(cardId) {
+    const s = cardStats[cardId] || { likes:0, passes:0, views:0 };
+    if (s.views === 0) return 0.75; // 新卡优先曝光
+    const likeRatio = s.likes / s.views;
+    return 0.08 + likeRatio * 0.92; // 0.08~1.0
+  }
+
+  function pickNextCard(excludeId) {
+    const all = getAllDoorCards().filter(c => c.id !== excludeId);
+    if (all.length === 0) return null;
+    const weighted = all.map(c => ({ card:c, w:getCardWeight(c.id) }));
+    const total = weighted.reduce((s, x) => s + x.w, 0);
+    let rand = Math.random() * total;
+    for (const { card, w } of weighted) {
+      rand -= w;
+      if (rand <= 0) return card;
+    }
+    return all[0];
+  }
+
+  function renderDoorCard(card) {
+    const el = document.getElementById('doorCard');
+    el.style.transition = 'none';
+    el.style.transform = 'translateX(0) rotate(0deg)';
+    el.style.opacity = '1';
+    document.getElementById('doorSwipeHint').style.opacity = '0';
+
+    if (card.type === 'user' && card.image) {
+      el.innerHTML = `
+        <div class="h-full flex flex-col bg-white">
+          <div style="flex:1;min-height:0;overflow:hidden">
+            <img src="${card.image}" style="width:100%;height:100%;object-fit:cover">
+          </div>
+          <div style="flex-shrink:0;padding:16px 20px 20px">
+            <p style="font-size:14px;color:#374151;line-height:1.6">${card.text || ''}</p>
+            <p style="font-size:11px;color:#f59e0b;margin-top:8px">${card.tag || '#微光瞬间'}</p>
+          </div>
+        </div>`;
+    } else {
+      const [c1, c2] = card.colors || ['#FFFBEB','#FEF3C7'];
+      const shadow = card.dark ? '0 2px 8px rgba(0,0,0,.35)' : 'none';
+      el.innerHTML = `
+        <div style="height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:40px 32px;text-align:center;background:linear-gradient(160deg,${c1},${c2})">
+          <div style="font-size:64px;margin-bottom:24px;filter:drop-shadow(0 6px 12px rgba(0,0,0,.12))">${card.emoji}</div>
+          <p style="font-size:19px;font-weight:500;line-height:1.65;white-space:pre-line;color:${card.textColor||'#374151'};text-shadow:${shadow}">${card.text}</p>
+        </div>`;
+    }
+
+    // 更新统计
+    const s = cardStats[card.id] || { likes:0, passes:0, views:0 };
+    s.views++;
+    cardStats[card.id] = s;
+    localStorage.setItem('cardStats', JSON.stringify(cardStats));
+
+    currentDoorCard = card;
+    doorSeenToday++;
+    document.getElementById('doorSeenCount').textContent = `今日已看 ${doorSeenToday} 张`;
+  }
+
+  function loadNextDoorCard(excludeId) {
+    const card = pickNextCard(excludeId);
+    if (!card) {
+      document.getElementById('doorCard').innerHTML = `
+        <div style="height:100%;display:flex;align-items:center;justify-content:center;text-align:center;padding:40px;background:linear-gradient(135deg,#fffbeb,#fef3c7)">
+          <div>
+            <div style="font-size:48px;margin-bottom:16px">🌟</div>
+            <p style="font-size:15px;font-weight:600;color:#d97706">今天的微光都看完了</p>
+            <p style="font-size:12px;color:#a8a8a8;margin-top:8px">明天再来，或分享你的微光</p>
+          </div>
+        </div>`;
+      return;
+    }
+    renderDoorCard(card);
+  }
+
+  function rateCard(action) {
+    if (!currentDoorCard) return;
+    const s = cardStats[currentDoorCard.id] || { likes:0, passes:0, views:0 };
+    if (action === 'like') {
+      s.likes++;
+      if (!likedCardIds.includes(currentDoorCard.id)) {
+        likedCardIds.unshift(currentDoorCard.id);
+        if (likedCardIds.length > 200) likedCardIds = likedCardIds.slice(0,200);
+        localStorage.setItem('likedCardIds', JSON.stringify(likedCardIds));
+      }
+      document.getElementById('likedCount').textContent = likedCardIds.length;
+      showToast('❤️ 已收藏这道微光');
+      addActivity('收藏了一道微光', '✨', true);
+    } else {
+      s.passes++;
+    }
+    cardStats[currentDoorCard.id] = s;
+    localStorage.setItem('cardStats', JSON.stringify(cardStats));
+
+    const prevId = currentDoorCard.id;
+    const el = document.getElementById('doorCard');
+    el.style.transition = 'none';
+    el.style.opacity = '0';
+    setTimeout(() => loadNextDoorCard(prevId), 60);
+  }
+
+  // ══════════════════════════════════
+  // 微光时刻：滑动手势
+  // ══════════════════════════════════
+  function initDoorSwipe() {
+    doorSwipeEl = document.getElementById('doorCard');
+    const hint = document.getElementById('doorSwipeHint');
+
+    doorSwipeEl.addEventListener('pointerdown', e => {
+      isDragging = true;
+      dragStartX = e.clientX;
+      doorSwipeEl.style.transition = 'none';
+      doorSwipeEl.setPointerCapture(e.pointerId);
+    });
+
+    doorSwipeEl.addEventListener('pointermove', e => {
+      if (!isDragging) return;
+      const dx = e.clientX - dragStartX;
+      doorSwipeEl.style.transform = `translateX(${dx}px) rotate(${dx/22}deg)`;
+      if (Math.abs(dx) > 35) {
+        hint.innerHTML = dx > 0
+          ? '<span style="font-size:52px">❤️</span>'
+          : '<span style="font-size:52px;filter:grayscale(1);opacity:.5">✕</span>';
+        hint.style.background = dx > 0 ? 'rgba(251,191,36,.18)' : 'rgba(0,0,0,.07)';
+        hint.style.opacity = Math.min((Math.abs(dx)-35)/90, 0.95);
+      } else {
+        hint.style.opacity = '0';
+      }
+    });
+
+    doorSwipeEl.addEventListener('pointerup', e => {
+      if (!isDragging) return;
+      isDragging = false;
+      const dx = e.clientX - dragStartX;
+      if (dx > 75) {
+        doorSwipeEl.style.transition = 'transform .35s ease-out, opacity .25s ease';
+        doorSwipeEl.style.transform = 'translateX(130%) rotate(22deg)';
+        doorSwipeEl.style.opacity = '0';
+        hint.style.opacity = '0';
+        setTimeout(() => rateCard('like'), 300);
+      } else if (dx < -75) {
+        doorSwipeEl.style.transition = 'transform .35s ease-out, opacity .25s ease';
+        doorSwipeEl.style.transform = 'translateX(-130%) rotate(-22deg)';
+        doorSwipeEl.style.opacity = '0';
+        hint.style.opacity = '0';
+        setTimeout(() => rateCard('pass'), 300);
+      } else {
+        doorSwipeEl.style.transition = 'transform .4s cubic-bezier(.175,.885,.32,1.275)';
+        doorSwipeEl.style.transform = 'translateX(0) rotate(0deg)';
+        hint.style.opacity = '0';
+      }
+    });
+  }
+
+  // ══════════════════════════════════
+  // 微光时刻：开关 & 已喜欢面板
+  // ══════════════════════════════════
+  function openGlimmerDoor() {
+    const door = document.getElementById('glimmerDoor');
+    door.classList.remove('hidden');
+    door.style.display = 'flex';
+    document.getElementById('likedCount').textContent = likedCardIds.length;
+    if (!doorInited) { initDoorSwipe(); doorInited = true; }
+    loadNextDoorCard(null);
+  }
+
+  function closeGlimmerDoor() {
+    const door = document.getElementById('glimmerDoor');
+    door.classList.add('hidden');
+    door.style.display = '';
+  }
+
+  function showLikedPanel() {
+    const allCards = getAllDoorCards();
+    const liked = likedCardIds.map(id => allCards.find(c => c.id === id)).filter(Boolean);
+    const list = document.getElementById('likedCardsList');
+    if (liked.length === 0) {
+      list.innerHTML = '<p style="text-align:center;color:#a8a8a8;padding:32px 0;font-size:13px">还没有喜欢的卡片，去滑一滑吧 →</p>';
+    } else {
+      list.innerHTML = liked.map(card => {
+        if (card.type === 'user' && card.image) {
+          return `<div style="display:flex;gap:12px;align-items:flex-start;background:#fffbeb;border-radius:16px;padding:12px">
+            <img src="${card.image}" style="width:48px;height:48px;border-radius:10px;object-fit:cover;flex-shrink:0">
+            <div><p style="font-size:12px;color:#374151;line-height:1.5">${card.text||''}</p>
+            <p style="font-size:11px;color:#f59e0b;margin-top:4px">${card.tag||''}</p></div>
+          </div>`;
+        }
+        const [c1,c2] = card.colors||['#fffbeb','#fef3c7'];
+        return `<div style="display:flex;gap:12px;align-items:center;background:linear-gradient(90deg,${c1},${c2});border-radius:16px;padding:12px 14px">
+          <span style="font-size:24px;flex-shrink:0">${card.emoji||'✨'}</span>
+          <p style="font-size:12px;line-height:1.5;white-space:pre-line;color:${card.textColor||'#92400e'}">${card.text}</p>
+        </div>`;
+      }).join('');
+    }
+    const panel = document.getElementById('likedPanel');
+    panel.classList.remove('hidden');
+    panel.style.display = 'block';
+  }
+
+  // ══════════════════════════════════
+  // 游戏导航渐隐初始化
+  // ══════════════════════════════════
+  // 初始检查是否已在末尾
+  setTimeout(() => {
+    const atEnd = gameNavEl.scrollLeft + gameNavEl.clientWidth >= gameNavEl.scrollWidth - 4;
+    if (atEnd) navFadeEl.style.opacity = '0';
+  }, 100);
+
+  // PWA 安装
+  let deferredPrompt;
+  window.addEventListener('beforeinstallprompt', e => { e.preventDefault(); deferredPrompt = e; });
+</script>
+</body>
+</html>

@@ -1,0 +1,24 @@
+{
+  "name": "苟住了",
+  "short_name": "苟住了",
+  "description": "理直气壮不优秀的精神庇护所",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#F5E6D3",
+  "theme_color": "#7B8FA1",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
